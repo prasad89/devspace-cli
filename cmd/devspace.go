@@ -4,7 +4,6 @@ Copyright © 2025 Prasad Bhalerao
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -13,10 +12,10 @@ import (
 // devspaceCmd represents the devspace command
 var devspaceCmd = &cobra.Command{
 	Use:   "devspace",
-	Short: "CLI for managing DevSpace(s)",
-	Long:  `The CLI, DevSpace, serves as the client-side interface for interacting with the DevSpace API server`,
+	Short: "CLI for managing DevSpace instances.",
+	Long:  "The DevSpace CLI serves as the client-side interface for interacting with the DevSpace API server. It allows users to authenticate, configure settings, and manage DevSpace instances.",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("devspace called")
+		cmd.Help()
 	},
 }
 
@@ -25,16 +24,4 @@ func Execute() {
 	if err != nil {
 		os.Exit(1)
 	}
-}
-
-func init() {
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// devspaceCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// devspaceCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

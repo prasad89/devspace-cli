@@ -5,35 +5,34 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
+	"github.com/prasad89/devspace-cli/internal"
 	"github.com/spf13/cobra"
 )
 
 // configCmd represents the config command
 var configCmd = &cobra.Command{
 	Use:   "config",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Configure the DevSpace CLI",
+	Long:  "The config command is used to configure the DevSpace CLI. It allows you to set the API endpoint and other necessary settings.",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("config called")
+		cfg, configPath := internal.GetConfig()
+
+		endpoint, _ := cmd.Flags().GetString("endpoint")
+
+		cfg.Section("server").Key("endpoint").SetValue(endpoint)
+		if err := cfg.SaveTo(configPath); err != nil {
+			fmt.Printf("Failed to update config file: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("Updated config file at", configPath)
 	},
 }
 
 func init() {
 	devspaceCmd.AddCommand(configCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// configCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// configCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	configCmd.Flags().StringP("endpoint", "e", "", "Set the API endpoint for DevSpace CLI")
+	configCmd.MarkFlagRequired("endpoint")
 }
