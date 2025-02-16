@@ -23,26 +23,33 @@ var loginCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg, configPath := internal.GetConfig()
 
-		username, _ := cmd.Flags().GetString("username")
-		password, _ := cmd.Flags().GetString("password")
-
 		endpoint := cfg.Section("server").Key("endpoint").String()
 		if endpoint == "" {
 			fmt.Println("Error: API endpoint is not configured. Check 'devspace config --help' for more information.")
 			os.Exit(1)
 		}
 
-		payload := map[string]string{
+		username, _ := cmd.Flags().GetString("username")
+		password, _ := cmd.Flags().GetString("password")
+
+		payload, err := json.Marshal(map[string]string{
 			"username": username,
 			"password": password,
-		}
-		jsonData, err := json.Marshal(payload)
+		})
 		if err != nil {
 			fmt.Printf("Error creating JSON payload: %v\n", err)
 			os.Exit(1)
 		}
 
-		resp, err := http.Post(endpoint+"/login", "application/json", bytes.NewBuffer(jsonData))
+		req, err := http.NewRequest("POST", endpoint+"/login", bytes.NewBuffer(payload))
+		if err != nil {
+			fmt.Printf("Error creating request: %v\n", err)
+			os.Exit(1)
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
 		if err != nil {
 			fmt.Printf("Error sending request: %v\n", err)
 			os.Exit(1)
@@ -69,14 +76,10 @@ var loginCmd = &cobra.Command{
 		}
 
 		cfg.Section("auth").Key("username").SetValue(username)
-		if err := cfg.SaveTo(configPath); err != nil {
-			fmt.Printf("Failed to save username: %v\n", err)
-			os.Exit(1)
-		}
-
 		cfg.Section("auth").Key("token").SetValue(responseData.Token)
+
 		if err := cfg.SaveTo(configPath); err != nil {
-			fmt.Printf("Failed to save authentication token: %v\n", err)
+			fmt.Printf("Failed to save authentication data: %v\n", err)
 			os.Exit(1)
 		}
 
