@@ -4,25 +4,25 @@ Copyright © 2025 Prasad Bhalerao
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 
-	"github.com/markkurossi/tabulate"
 	"github.com/prasad89/devspace-cli/internal"
-	"github.com/prasad89/devspace-cli/models"
 	"github.com/spf13/cobra"
 )
 
-// listCmd represents the list command
-var listCmd = &cobra.Command{
-	Use:     "list",
-	Short:   "List available DevSpace instances",
-	Long:    "The list command displays all available DevSpace instances within your namespace. It provides an overview of active deployments and their configurations.",
-	Aliases: []string{"ls"},
+// createCmd represents the create command
+var createCmd = &cobra.Command{
+	Use:   "create",
+	Short: "Create a new DevSpace instance",
+	Long:  "The create command is used to create a new DevSpace instance with the specified configurations. It provisions the necessary resources and applies your settings to initialize the environment.",
 	Run: func(cmd *cobra.Command, args []string) {
+		name, _ := cmd.Flags().GetString("name")
+
 		cfg, _ := internal.GetConfig()
 
 		endpoint := cfg.Section("server").Key("endpoint").String()
@@ -38,13 +38,23 @@ var listCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		req, err := http.NewRequest("GET", endpoint+"/devspaces", nil)
+		payload := map[string]string{
+			"name": name,
+		}
+		jsonPayload, err := json.Marshal(payload)
+		if err != nil {
+			fmt.Printf("Error creating request payload: %v\n", err)
+			os.Exit(1)
+		}
+
+		req, err := http.NewRequest("POST", endpoint+"/devspace", bytes.NewBuffer(jsonPayload))
 		if err != nil {
 			fmt.Printf("Error creating request: %v\n", err)
 			os.Exit(1)
 		}
 
 		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Content-Type", "application/json")
 
 		client := &http.Client{}
 		resp, err := client.Do(req)
@@ -60,39 +70,19 @@ var listCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if resp.StatusCode != http.StatusOK {
-			fmt.Printf("Failed to list DevSpaces: %s\n", body)
+		if resp.StatusCode != http.StatusCreated {
+			fmt.Printf("Failed to create DevSpace: %s\n", body)
 			os.Exit(1)
 		}
 
-		var data struct {
-			Devspaces []models.Devspace `json:"devspaces"`
-		}
-
-		if err := json.Unmarshal(body, &data); err != nil {
-			fmt.Printf("Error parsing JSON: %v\n", err)
-			os.Exit(1)
-		}
-
-		devspaces := data.Devspaces
-
-		if len(devspaces) == 0 {
-			fmt.Println("No DevSpaces found.")
-			return
-		}
-
-		tab := tabulate.New(tabulate.Unicode)
-		tab.Header("Name").SetAlign(tabulate.ML)
-
-		for _, devspace := range devspaces {
-			row := tab.Row()
-			row.Column(devspace.Name)
-		}
-
-		tab.Print(os.Stdout)
+		fmt.Println("✅ DevSpace created successfully!")
+		fmt.Println(string(body))
 	},
 }
 
 func init() {
-	devspaceCmd.AddCommand(listCmd)
+	devspaceCmd.AddCommand(createCmd)
+
+	createCmd.Flags().StringP("name", "n", "", "Name for the DevSpace")
+	createCmd.MarkFlagRequired("name")
 }
